@@ -76,3 +76,9 @@ export function deleteTodo(id: number) {
     [id]
   );
 }
+export function toggleDone(id: number, current: number) {
+  return db.runSync(
+    `UPDATE todos SET done = ? WHERE id = ?`,
+    [current === 1 ? 0 : 1, id]
+  );
+}

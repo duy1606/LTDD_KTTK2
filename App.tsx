@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { SafeAreaView, Text, FlatList, StyleSheet, View, Pressable, Modal, TextInput, Alert } from 'react-native';
-import { initDB, getAllTodos, insertTodo } from './db';
+import { initDB, getAllTodos, insertTodo, toggleDone } from './db';
 
 export default function App() {
   const [todos, setTodos] = useState<any[]>([]);
@@ -22,17 +22,22 @@ export default function App() {
       Alert.alert("Lỗi", "Không được để trống!");
       return;
     }
-    insertTodo(title); // ✅ Insert DB
+    insertTodo(title);
     setTitle("");
     setModalVisible(false);
-    loadTodos(); // ✅ Refresh list
+    loadTodos();
+  };
+
+  // ✅ CLICK item → Toggle Done
+  const handleToggle = (item: any) => {
+    toggleDone(item.id, item.done);
+    loadTodos();
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <Text style={styles.header}>Todo Notes 📌</Text>
 
-      {/* ✅ Empty State */}
       {todos.length === 0 ? (
         <View style={styles.emptyBox}>
           <Text style={styles.emptyText}>Chưa có việc nào</Text>
@@ -42,16 +47,18 @@ export default function App() {
           data={todos}
           keyExtractor={(item) => item.id.toString()}
           renderItem={({ item }) => (
-            <View style={styles.item}>
-              <Text style={[styles.title, item.done ? styles.done : null]}>
-                {item.title}
-              </Text>
-            </View>
+            <Pressable onPress={() => handleToggle(item)}>
+              <View style={styles.item}>
+                <Text style={[styles.title, item.done ? styles.done : null]}>
+                  {item.title}
+                </Text>
+              </View>
+            </Pressable>
           )}
         />
       )}
 
-      {/* ✅ Nút "+" */}
+      {/* ✅ Nút thêm mới */}
       <Pressable style={styles.addBtn} onPress={() => setModalVisible(true)}>
         <Text style={{ fontSize: 22 }}>＋</Text>
       </Pressable>
@@ -83,10 +90,10 @@ export default function App() {
           </View>
         </View>
       </Modal>
+
     </SafeAreaView>
   );
 }
-
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: '#fff' },
   header: { fontSize: 22, fontWeight: 'bold', textAlign: 'center', marginVertical: 10 },
