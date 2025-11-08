@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { SafeAreaView, Text, FlatList, StyleSheet, View, Pressable, Modal, TextInput, Alert } from 'react-native';
-import { initDB, getAllTodos, insertTodo, toggleDone, updateTodoTitle,deleteTodo } from './db';
+import { initDB, getAllTodos, insertTodo, toggleDone, updateTodoTitle, deleteTodo } from './db';
 
 export default function App() {
   const [todos, setTodos] = useState<any[]>([]);
@@ -9,47 +9,40 @@ export default function App() {
   const [title, setTitle] = useState("");
   const [editItem, setEditItem] = useState<any | null>(null);
 
+  // ✅ State cho Search
+  const [searchText, setSearchText] = useState("");
+
   useEffect(() => {
     initDB();
     loadTodos();
   }, []);
 
-  function loadTodos() {
+  const loadTodos = useCallback(() => {
     const data = getAllTodos();
     setTodos(data);
-  }
+  }, []);
 
-  // ✅ Thêm mới
   const handleAdd = () => {
-    if (!title.trim()) {
-      Alert.alert("Lỗi", "Không được để trống!");
-      return;
-    }
+    if (!title.trim()) return Alert.alert("Lỗi", "Không được để trống!");
     insertTodo(title);
     setTitle("");
     setModalAdd(false);
     loadTodos();
   };
 
-  // ✅ Toggle Done
   const handleToggle = (item: any) => {
     toggleDone(item.id, item.done);
     loadTodos();
   };
 
-  // ✅ Mở Modal Edit
   const openEdit = (item: any) => {
     setEditItem(item);
     setTitle(item.title);
     setModalEdit(true);
   };
 
-  // ✅ Lưu Edit
   const handleSaveEdit = () => {
-    if (!title.trim()) {
-      Alert.alert("Lỗi", "Không được để trống!");
-      return;
-    }
+    if (!title.trim()) return Alert.alert("Lỗi", "Không được để trống!");
     updateTodoTitle(editItem.id, title);
     setTitle("");
     setEditItem(null);
@@ -57,12 +50,8 @@ export default function App() {
     loadTodos();
   };
 
-  // ✅ Hàm xóa Todo có xác nhận
-const handleDelete = (id: number) => {
-  Alert.alert(
-    "Xóa công việc?",
-    "Bạn có chắc chắn muốn xóa không?",
-    [
+  const handleDelete = (id: number) => {
+    Alert.alert("Xóa công việc?", "Bạn có chắc muốn xóa?", [
       { text: "Hủy", style: "cancel" },
       {
         text: "Xóa",
@@ -70,55 +59,65 @@ const handleDelete = (id: number) => {
         onPress: () => {
           deleteTodo(id);
           loadTodos();
-        },
-      },
-    ]
-  );
-};
+        }
+      }
+    ]);
+  };
+
+  // ✅ Lọc realtime – tối ưu dùng useMemo
+  const filteredTodos = useMemo(() => {
+    if (!searchText.trim()) return todos;
+    return todos.filter(item =>
+      item.title.toLowerCase().includes(searchText.toLowerCase())
+    );
+  }, [searchText, todos]);
 
   return (
     <SafeAreaView style={styles.container}>
       <Text style={styles.header}>Todo Notes 📌</Text>
 
-      {todos.length === 0 ? (
+      {/* ✅ Ô Search */}
+      <TextInput
+        placeholder="Tìm kiếm..."
+        value={searchText}
+        onChangeText={setSearchText}
+        style={styles.search}
+      />
+
+      {filteredTodos.length === 0 ? (
         <View style={styles.emptyBox}>
-          <Text style={styles.emptyText}>Chưa có việc nào</Text>
+          <Text style={styles.emptyText}>Không tìm thấy kết quả</Text>
         </View>
       ) : (
         <FlatList
-          data={todos}
+          data={filteredTodos}
           keyExtractor={(item) => item.id.toString()}
           renderItem={({ item }) => (
-  <View style={styles.item}>
-    <Pressable onPress={() => handleToggle(item)}>
-      <Text style={[styles.title, item.done ? styles.done : null]}>
-        {item.title}
-      </Text>
-    </Pressable>
+            <View style={styles.item}>
+              <Pressable onPress={() => handleToggle(item)}>
+                <Text style={[styles.title, item.done ? styles.done : null]}>
+                  {item.title}
+                </Text>
+              </Pressable>
 
-    <View style={styles.actions}>
-      <Pressable onPress={() => openEdit(item)}>
-        <Text style={styles.edit}>✏️</Text>
-      </Pressable>
-
-      {/* ✅ Nút Delete */}
-      <Pressable onPress={() => handleDelete(item.id)}>
-        <Text style={styles.delete}>🗑️</Text>
-      </Pressable>
-    </View>
-  </View>
-)}
-
+              <View style={styles.actions}>
+                <Pressable onPress={() => openEdit(item)}>
+                  <Text style={styles.edit}>✏️</Text>
+                </Pressable>
+                <Pressable onPress={() => handleDelete(item.id)}>
+                  <Text style={styles.delete}>🗑️</Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
         />
       )}
 
-      {/* ✅ Nút thêm */}
       <Pressable style={styles.addBtn} onPress={() => setModalAdd(true)}>
         <Text style={{ fontSize: 22 }}>＋</Text>
       </Pressable>
 
-
-      {/* ✅ Modal Thêm mới */}
+      {/* Modal Add */}
       <Modal visible={modalAdd} transparent animationType="slide">
         <View style={styles.modalWrap}>
           <View style={styles.modalBox}>
@@ -141,24 +140,17 @@ const handleDelete = (id: number) => {
         </View>
       </Modal>
 
-
-      {/* ✅ Modal Edit */}
+      {/* Modal Edit */}
       <Modal visible={modalEdit} transparent animationType="fade">
         <View style={styles.modalWrap}>
           <View style={styles.modalBox}>
             <Text style={styles.modalTitle}>Sửa công việc</Text>
-
-            <TextInput
-              style={styles.input}
-              value={title}
-              onChangeText={setTitle}
-            />
+            <TextInput style={styles.input} value={title} onChangeText={setTitle} />
 
             <View style={styles.row}>
               <Pressable style={styles.btn} onPress={handleSaveEdit}>
                 <Text>Lưu</Text>
               </Pressable>
-
               <Pressable style={[styles.btn, { backgroundColor: "#ddd" }]} onPress={() => setModalEdit(false)}>
                 <Text>Hủy</Text>
               </Pressable>
@@ -174,6 +166,17 @@ const handleDelete = (id: number) => {
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: '#fff' },
   header: { fontSize: 22, fontWeight: 'bold', textAlign: 'center', marginVertical: 10 },
+
+  // ✅ Style Search
+  search: {
+    backgroundColor: "#eee",
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#ddd",
+  },
+
   item: {
     backgroundColor: '#eee',
     padding: 12,
@@ -215,12 +218,6 @@ const styles = StyleSheet.create({
     width: "45%",
     alignItems: "center",
   },
-  actions: {
-  flexDirection: "row",
-  gap: 12,
-},
-delete: {
-  fontSize: 18,
-}
-
+  actions: { flexDirection: "row", gap: 12 },
+  delete: { fontSize: 18 }
 });
