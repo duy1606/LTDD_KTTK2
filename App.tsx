@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { SafeAreaView, Text, FlatList, StyleSheet, View, Pressable, Modal, TextInput, Alert } from 'react-native';
-import { initDB, getAllTodos, insertTodo, toggleDone, updateTodoTitle } from './db';
+import { initDB, getAllTodos, insertTodo, toggleDone, updateTodoTitle,deleteTodo } from './db';
 
 export default function App() {
   const [todos, setTodos] = useState<any[]>([]);
@@ -57,6 +57,25 @@ export default function App() {
     loadTodos();
   };
 
+  // ✅ Hàm xóa Todo có xác nhận
+const handleDelete = (id: number) => {
+  Alert.alert(
+    "Xóa công việc?",
+    "Bạn có chắc chắn muốn xóa không?",
+    [
+      { text: "Hủy", style: "cancel" },
+      {
+        text: "Xóa",
+        style: "destructive",
+        onPress: () => {
+          deleteTodo(id);
+          loadTodos();
+        },
+      },
+    ]
+  );
+};
+
   return (
     <SafeAreaView style={styles.container}>
       <Text style={styles.header}>Todo Notes 📌</Text>
@@ -70,19 +89,26 @@ export default function App() {
           data={todos}
           keyExtractor={(item) => item.id.toString()}
           renderItem={({ item }) => (
-            <View style={styles.item}>
-              <Pressable onPress={() => handleToggle(item)}>
-                <Text style={[styles.title, item.done ? styles.done : null]}>
-                  {item.title}
-                </Text>
-              </Pressable>
+  <View style={styles.item}>
+    <Pressable onPress={() => handleToggle(item)}>
+      <Text style={[styles.title, item.done ? styles.done : null]}>
+        {item.title}
+      </Text>
+    </Pressable>
 
-              {/* ✅ Nút Edit */}
-              <Pressable onPress={() => openEdit(item)}>
-                <Text style={styles.edit}>✏️</Text>
-              </Pressable>
-            </View>
-          )}
+    <View style={styles.actions}>
+      <Pressable onPress={() => openEdit(item)}>
+        <Text style={styles.edit}>✏️</Text>
+      </Pressable>
+
+      {/* ✅ Nút Delete */}
+      <Pressable onPress={() => handleDelete(item.id)}>
+        <Text style={styles.delete}>🗑️</Text>
+      </Pressable>
+    </View>
+  </View>
+)}
+
         />
       )}
 
@@ -189,4 +215,12 @@ const styles = StyleSheet.create({
     width: "45%",
     alignItems: "center",
   },
+  actions: {
+  flexDirection: "row",
+  gap: 12,
+},
+delete: {
+  fontSize: 18,
+}
+
 });
