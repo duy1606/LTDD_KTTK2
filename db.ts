@@ -88,3 +88,19 @@ export function updateTodoTitle(id: number, title: string) {
     [title, id]
   );
 }
+export function findTodoByTitle(title: string) {
+  return db.getFirstSync(
+    "SELECT * FROM todos WHERE title = ?",
+    [title]
+  );
+}
+export function insertFromAPI(title: string, completed: boolean) {
+  const exists = findTodoByTitle(title);
+  if (!exists) {
+    db.runSync(
+      "INSERT INTO todos (title, done, created_at) VALUES (?, ?, strftime('%s','now'))",
+      [title, completed ? 1 : 0]
+    );
+  }
+}
+
