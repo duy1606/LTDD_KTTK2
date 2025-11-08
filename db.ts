@@ -82,3 +82,9 @@ export function toggleDone(id: number, current: number) {
     [current === 1 ? 0 : 1, id]
   );
 }
+export function updateTodoTitle(id: number, title: string) {
+  return db.runSync(
+    `UPDATE todos SET title = ? WHERE id = ?`,
+    [title, id]
+  );
+}
